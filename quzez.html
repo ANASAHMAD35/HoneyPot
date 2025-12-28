@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كويز الماتريكس الإلكتروني</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&family=Share+Tech+Mono&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --matrix-green: #00ff41;
+            --dark-bg: #0d0208;
+        }
+
+        body {
+            font-family: 'Tajawal', 'Share Tech Mono', sans-serif;
+            background-color: var(--dark-bg);
+            margin: 0;
+            overflow: hidden;
+            color: var(--matrix-green);
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .matrix-font {
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .glass-card {
+            background: rgba(0, 20, 0, 0.9);
+            border: 2px solid var(--matrix-green);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        .option-btn {
+            transition: all 0.2s ease;
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            background: rgba(0, 40, 0, 0.4);
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: var(--matrix-green);
+            color: black;
+            box-shadow: 0 0 15px var(--matrix-green);
+            transform: scale(1.01);
+        }
+
+        .correct {
+            background-color: var(--matrix-green) !important;
+            color: black !important;
+            border-color: white !important;
+        }
+
+        .wrong {
+            background-color: #ff0000 !important;
+            color: white !important;
+            border-color: #ff0000 !important;
+            box-shadow: 0 0 15px #ff0000;
+        }
+
+        .glitch-text {
+            animation: glitch 2s infinite;
+        }
+
+        @keyframes glitch {
+            0% { text-shadow: 2px 0 0 red, -2px 0 0 blue; }
+            25% { text-shadow: -2px 0 0 red, 2px 0 0 blue; }
+            50% { text-shadow: 2px 0 0 blue, -2px 0 0 red; }
+            100% { text-shadow: 0 0 0 transparent; }
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <canvas id="matrix-canvas"></canvas>
+
+    <div class="fixed top-4 right-4 z-50 flex gap-2">
+        <select id="lang-select" onchange="changeLanguage(this.value)"
+            class="bg-black border border-green-500 text-green-500 text-xs matrix-font p-2 outline-none cursor-pointer hover:bg-green-900/30">
+            <option value="ar">AR_عربي</option>
+            <option value="en">EN_English</option>
+            <option value="de">DE_Deutsch</option>
+            <option value="fr">FR_Français</option>
+        </select>
+    </div>
+
+    <div id="quiz-container" class="w-full max-w-2xl glass-card rounded-xl p-8 overflow-hidden relative border-t-4 border-green-500">
+        <div class="absolute top-0 right-0 h-1 bg-green-500 transition-all duration-500 shadow-[0_0_10px_#00ff41]"
+            id="progress-bar" style="width: 0%"></div>
+
+        <div id="start-screen" class="text-center">
+            <div class="mb-6 inline-block p-4 rounded-full border-2 border-green-500 animate-pulse">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                </svg>
+            </div>
+            <h1 id="ui-title" class="text-3xl font-bold mb-4 matrix-font tracking-widest uppercase glitch-text">ACCESS GRANTED</h1>
+            <p id="ui-welcome" class="text-green-300 mb-8 opacity-80">نظام اختبار المعلومات السيبرانية... جاهز للبدء.</p>
+            <button id="ui-start-btn" onclick="startQuiz()"
+                class="bg-transparent border-2 border-green-500 text-green-500 hover:bg-green-500 hover:text-black font-bold py-3 px-10 rounded-none matrix-font transition-all active:scale-95 shadow-[0_0_15px_rgba(0,255,65,0.4)]">
+                ENTER_SYSTEM
+            </button>
+        </div>
+
+        <div id="question-screen" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <span id="question-number" class="text-xs matrix-font border-b border-green-900 pb-1">NODE: 01 / 10</span>
+                <div class="flex items-center gap-2">
+                    <span id="ui-timer-label" class="text-[10px] matrix-font">TIME:</span>
+                    <span id="timer"
+                        class="text-lg font-mono px-3 py-1 bg-green-900/30 rounded border border-green-500/50">15.00s</span>
+                </div>
+            </div>
+
+            <h2 id="question-text" class="text-xl font-bold mb-8 leading-relaxed text-white">جاري تحليل البيانات...</h2>
+
+            <div id="options-container" class="space-y-4"></div>
+
+            <div class="mt-8 flex justify-between items-center">
+                <div id="feedback-text" class="matrix-font text-sm opacity-0 transition-opacity">COMPUTING...</div>
+                <button id="next-btn" onclick="nextQuestion()"
+                    class="hidden bg-green-500 text-black py-2 px-8 font-bold matrix-font hover:bg-white transition-all">
+                    NEXT >>
+                </button>
+            </div>
+        </div>
+
+        <div id="result-screen" class="hidden text-center">
+            <h2 id="ui-result-title" class="text-3xl font-bold mb-2 matrix-font">SYSTEM_REPORT</h2>
+            <div class="text-7xl font-bold text-green-500 my-8 matrix-font drop-shadow-[0_0_20px_#00ff41]"
+                id="score-display">00/00</div>
+            <p id="result-message" class="text-green-300 mb-8 matrix-font lowercase">terminal_task_completed</p>
+            <button id="ui-restart-btn" onclick="location.reload()"
+                class="bg-transparent border-2 border-green-500 text-green-500 py-3 px-10 font-bold matrix-font hover:bg-green-500 hover:text-black transition-all">
+                REBOOT_SYSTEM
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Matrix Background
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const alphabet = 'アァカサタナハマヤャラワ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const fontSize = 16;
+        let columns = canvas.width / fontSize;
+        let rainDrops = Array.from({ length: columns }).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#00ff41';
+            ctx.font = fontSize + 'px monospace';
+            for (let i = 0; i < rainDrops.length; i++) {
+                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+                if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) rainDrops[i] = 0;
+                rainDrops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 30);
+
+        // Language Config
+        const translations = {
+            ar: { dir: 'rtl', title: 'تم السماح بالدخول', welcome: 'نظام اختبار المعلومات السيبرانية... جاهز للبدء.', startBtn: 'دخول_النظام', node: 'نقطة', time: 'الوقت', next: 'التالي >>', resultTitle: 'تقرير_النظام', restart: 'إعادة_تشغيل', feedbackCorrect: 'تم تأكيد الدخول', feedbackWrong: 'تم رفض الدخول', feedbackTimeout: 'فقدان الإشارة', statusElite: 'الحالة: هكر_نخبة', statusAdvanced: 'الحالة: مستخدم_متقدم', statusIncomplete: 'الحالة: اختراق_غير_مكتمل', statusScript: 'الحالة: طفل_سكربتات' },
+            en: { dir: 'ltr', title: 'ACCESS GRANTED', welcome: 'Cyber information testing system... ready for initialization.', startBtn: 'ENTER_SYSTEM', node: 'NODE', time: 'TIME', next: 'NEXT >>', resultTitle: 'SYSTEM_REPORT', restart: 'REBOOT_SYSTEM', feedbackCorrect: 'ACCESS_CONFIRMED', feedbackWrong: 'ACCESS_DENIED', feedbackTimeout: 'SIGNAL_LOST', statusElite: 'status: elite_hacker_level', statusAdvanced: 'status: advanced_user_detected', statusIncomplete: 'status: breach_incomplete', statusScript: 'status: script_kiddie_detected' },
+            de: { dir: 'ltr', title: 'ZUGRIFF GEWÄHRT', welcome: 'Cyber-Informations-Testsystem... bereit zur Initialisierung.', startBtn: 'SYSTEM_BETRETEN', node: 'KNOTEN', time: 'ZEIT', next: 'WEITER >>', resultTitle: 'SYSTEMBERICHT', restart: 'SYSTEM_NEUSTART', feedbackCorrect: 'ZUGRIFF_BESTÄTIGT', feedbackWrong: 'ZUGRIFF_VERWEIGERT', feedbackTimeout: 'SIGNALVERLUST', statusElite: 'Status: Elite-Hacker-Level', statusAdvanced: 'Status: Fortgeschrittener Benutzer', statusIncomplete: 'Status: Bruch unvollständig', statusScript: 'Status: Script-Kiddie erkannt' },
+            fr: { dir: 'ltr', title: 'ACCÈS AUTORISÉ', welcome: 'Système de test cyber-information... prêt pour initialisation.', startBtn: 'ENTRER_SYSTÈME', node: 'NŒUD', time: 'TEMPS', next: 'SUIVANT >>', resultTitle: 'RAPPORT_SYSTÈME', restart: 'REDÉMARRER_SYSTÈME', feedbackCorrect: 'ACCÈS_CONFIRMÉ', feedbackWrong: 'ACCÈS_REFUSÉ', feedbackTimeout: 'SIGNAL_PERDU', statusElite: 'Statut : Niveau hacker d\'élite', statusAdvanced: 'Statut : Utilisateur avancé détecté', statusIncomplete: 'Statut : Brèche incomplète', statusScript: 'Statut : Script kiddie détecté' }
+        };
+
+        const quizDataFull = [
+            {
+                "ar": { "q": "ما هو الغرض الأساسي من نظام 'الهوني بوت'؟", "options": ["استدراج المهاجمين وجمع المعلومات", "تشفير قواعد البيانات الحقيقية", "زيادة سرعة استجابة الشبكة", "حذف البرمجيات الخبيثة تلقائياً"], "a": "استدراج المهاجمين وجمع المعلومات" },
+                "en": { "q": "What is the primary purpose of a 'Honeypot' system?", "options": ["Luring attackers and gathering intelligence", "Encrypting real databases", "Increasing network response speed", "Automatically deleting malware"], "a": "Luring attackers and gathering intelligence" },
+                "de": { "q": "Was ist der Hauptzweck eines 'Honeypot'-Systems?", "options": ["Angreifer anlocken und Informationen sammeln", "Verschlüsselung echter Datenbanken", "Erhöhung der Netzwerkgeschwindigkeit", "Automatisches Löschen von Malware"], "a": "Angreifer anlocken und Informationen sammeln" },
+                "fr": { "q": "Quel est l'objectif principal d'un système 'Honeypot'?", "options": ["Attirer les attaquants et recueillir des informations", "Chiffrement des bases de données réelles", "Augmenter la vitesse de réponse du réseau", "Suppression automatique des logiciels malveillants"], "a": "Attirer les attaquants et recueillir des informations" }
+            },
+            {
+                "ar": { "q": "من هو مؤلف كتاب 'بيضة الكوكو' (The Cuckoo's Egg)؟", "options": ["كليفورد ستول", "بيل تشيسويك", "فريد كوهين", "لوكس ريست"], "a": "كليفورد ستول" },
+                "en": { "q": "Who is the author of 'The Cuckoo's Egg'?", "options": ["Clifford Stoll", "Bill Cheswick", "Fred Cohen", "Lucs Rist"], "a": "Clifford Stoll" },
+                "de": { "q": "Wer ist der Autor von 'Das Kuckucksei'?", "options": ["Clifford Stoll", "Bill Cheswick", "Fred Cohen", "Lucs Rist"], "a": "Clifford Stoll" },
+                "fr": { "q": "Qui est l'auteur de 'The Cuckoo's Egg'?", "options": ["Clifford Stoll", "Bill Cheswick", "Fred Cohen", "Lucs Rist"], "a": "Clifford Stoll" }
+            },
+            {
+                "ar": { "q": "أي نوع من المصائد يحاكي الخدمات فقط دون وجود نظام تشغيل حقيقي؟", "options": ["منخفض التفاعل", "عالي التفاعل", "المصيدة النقية", "الهوني نت"], "a": "منخفض التفاعل" },
+                "en": { "q": "Which type of honeypot simulates services only without a real operating system?", "options": ["Low-interaction", "High-interaction", "Pure honeypot", "Honeynet"], "a": "Low-interaction" },
+                "de": { "q": "Welche Art von Honeypot simuliert nur Dienste ohne ein echtes Betriebssystem?", "options": ["Geringe Interaktion", "Hohe Interaktion", "Reiner Honeypot", "Honeynet"], "a": "Geringe Interaktion" },
+                "fr": { "q": "Quel type de honeypot simule uniquement des services sans véritable système d'exploitation?", "options": ["Faible interaction", "Haute interaction", "Honeypot pur", "Honeynet"], "a": "Faible interaction" }
+            },
+            {
+                "ar": { "q": "ما وظيفه 'جدار العسل' (Honeywall) الأساسية؟", "options": ["التحكم في البيانات ومنع الهجمات الخارجية", "تخزين كلمات المرور المسروقة", "توزيع الإنترنت على المصائد", "تشفير ملفات المستخدمين"], "a": "التحكم في البيانات ومنع الهجمات الخارجية" },
+                "en": { "q": "What is the primary function of a 'Honeywall'?", "options": ["Data control and preventing outbound attacks", "Storing stolen passwords", "Distributing internet to honeypots", "Encrypting user files"], "a": "Data control and preventing outbound attacks" },
+                "de": { "q": "Was ist die Hauptfunktion einer 'Honeywall'?", "options": ["Datenkontrolle und Verhinderung von ausgehenden Angriffen", "Speicherung gestohlener Passwörter", "Internetverteilung an Honeypots", "Verschlüsselung von Benutzerdateien"], "a": "Datenkontrolle und Verhinderung von ausgehenden Angriffen" },
+                "fr": { "q": "Quelle est la fonction principale d'un 'Honeywall'?", "options": ["Contrôle des données et prévention des attaques sortantes", "Stockage des mots de passe volés", "Distribution d'Internet aux honeypots", "Chiffrement des fichiers utilisateurs"], "a": "Contrôle des données et prévention des attaques sortantes" }
+            },
+            {
+                "ar": { "q": "ما هي ميزة دمج نماذج اللغة (LLMs) في أنظمة الهوني بوت؟", "options": ["توليد استجابات واقعية وفورية للأوامر", "تقليل حجم البيانات المخزنة", "حماية الشبكة من انقطاع الكهرباء", "تلقين المهاجمين دروساً أخلاقية"], "a": "توليد استجابات واقعية وفورية للأوامر" },
+                "en": { "q": "What is the advantage of integrating LLMs into honeypot systems?", "options": ["Generating realistic and instant command responses", "Reducing stored data size", "Protecting network from power outages", "Teaching attackers ethical lessons"], "a": "Generating realistic and instant command responses" },
+                "de": { "q": "Was ist der Vorteil der Integration von LLMs in Honeypot-Systeme?", "options": ["Erzeugung realistischer und sofortiger Befehlsantworten", "Reduzierung der gespeicherten Datenmenge", "Schutz des Netzwerks vor Stromausfällen", "Angreifern ethische Lektionen erteilen"], "a": "Erzeugung realistischer und sofortiger Befehlsantworten" },
+                "fr": { "q": "Quel est l'avantage d'intégrer des LLM dans les systèmes honeypot?", "options": ["Générer des réponses aux commandes réalistes et instantanées", "Réduire la taille des données stockées", "Protéger le réseau des coupures de courant", "Donner des leçons d'éthique aux attaquants"], "a": "Générer des réponses aux commandes réalistes et instantanées" }
+            },
+            {
+                "ar": { "q": "أداة 'Conpot' متخصصة في محاكاة أي نوع من الأنظمة؟", "options": ["أنظمة التحكم الصناعي (ICS)", "خوادم الويب", "أجهزة إنترنت الأشياء المنزلية", "قواعد البيانات المالية"], "a": "أنظمة التحكم الصناعي (ICS)" },
+                "en": { "q": "The 'Conpot' tool is specialized in emulating which type of systems?", "options": ["Industrial Control Systems (ICS)", "Web Servers", "Home IoT Devices", "Financial Databases"], "a": "Industrial Control Systems (ICS)" },
+                "de": { "q": "Das Tool 'Conpot' ist auf die Emulation welcher Systemart spezialisiert?", "options": ["Industrielle Steuerungssysteme (ICS)", "Webserver", "Heim-IoT-Geräte", "Finanzdatenbanken"], "a": "Industrielle Steuerungssysteme (ICS)" },
+                "fr": { "q": "L'outil 'Conpot' est spécialisé dans l'émulation de quel type de systèmes?", "options": ["Systèmes de contrôle industriel (ICS)", "Serveurs Web", "Appareils IoT domestiques", "Bases de données financières"], "a": "Systèmes de contrôle industriel (ICS)" }
+            },
+            {
+                "ar": { "q": "ما هي المنصة التي تجمع أكثر من 20 مصيدة وتعتمد على 'دوكر'؟", "options": ["T-Pot", "Kali Linux", "Metasploit", "Security Onion"], "a": "T-Pot" },
+                "en": { "q": "Which platform integrates over 20 honeypots and relies on 'Docker'?", "options": ["T-Pot", "Kali Linux", "Metasploit", "Security Onion"], "a": "T-Pot" },
+                "de": { "q": "Welche Plattform integriert über 20 Honeypots und basiert auf 'Docker'?", "options": ["T-Pot", "Kali Linux", "Metasploit", "Security Onion"], "a": "T-Pot" },
+                "fr": { "q": "Quelle plateforme intègre plus de 20 honeypots et s'appuie sur 'Docker'?", "options": ["T-Pot", "Kali Linux", "Metasploit", "Security Onion"], "a": "T-Pot" }
+            },
+            {
+                "ar": { "q": "ماذا يسمى المصطلح القانوني للمسؤولية عن هجمات تنطلق من الهوني بوت؟", "options": ["المسؤولية التبعية (Downstream Liability)", "الإهمال الجنائي", "المسؤولية المباشرة", "القرصنة الأخلاقية"], "a": "المسؤولية التبعية (Downstream Liability)" },
+                "en": { "q": "What is the legal term for liability regarding attacks launched from a honeypot?", "options": ["Downstream Liability", "Criminal Negligence", "Direct Liability", "Ethical Hacking"], "a": "Downstream Liability" },
+                "de": { "q": "Wie lautet der Rechtsbegriff für die Haftung bei Angriffen, die von einem Honeypot ausgehen?", "options": ["Downstream-Haftung", "Kriminelle Fahrlässigkeit", "Direkte Haftung", "Ethisches Hacken"], "a": "Downstream-Haftung" },
+                "fr": { "q": "Quel est le terme juridique désignant la responsabilité pour les attaques lancées depuis un honeypot?", "options": ["Responsabilité en aval (Downstream Liability)", "Négligence criminelle", "Responsabilité directe", "Piratage éthique"], "a": "Responsabilité en aval (Downstream Liability)" }
+            },
+            {
+                "ar": { "q": "كم بلغ إسهام قطاع الأمن السيبراني في الناتج المحلي السعودي عام 2024؟", "options": ["18.5 مليار ريال", "5 مليار ريال", "50 مليار ريال", "10 مليار ريال"], "a": "18.5 مليار ريال" },
+                "en": { "q": "How much was the cybersecurity sector's contribution to Saudi GDP in 2024?", "options": ["18.5 Billion SAR", "5 Billion SAR", "50 Billion SAR", "10 Billion SAR"], "a": "18.5 Billion SAR" },
+                "de": { "q": "Wie hoch war der Beitrag des Cybersicherheitssektors zum saudischen BIP im Jahr 2024?", "options": ["18,5 Milliarden SAR", "5 Milliarden SAR", "50 Milliarden SAR", "10 Milliarden SAR"], "a": "18,5 Milliarden SAR" },
+                "fr": { "q": "À combien s'est élevée la contribution du secteur de la cybersécurité au PIB saoudien en 2024?", "options": ["18,5 milliards SAR", "5 milliards SAR", "50 milliards SAR", "10 milliards SAR"], "a": "18,5 milliards SAR" }
+            },
+            {
+                "ar": { "q": "ماذا تسمى 'شراك البيانات' مثل ملفات Word الوهمية؟", "options": ["Honeytokens", "Firewalls", "Ransomware", "Spyware"], "a": "Honeytokens" },
+                "en": { "q": "What are 'data lures' like fake Word files called?", "options": ["Honeytokens", "Firewalls", "Ransomware", "Spyware"], "a": "Honeytokens" },
+                "de": { "q": "Wie werden 'Datenköder' wie gefälschte Word-Dateien genannt?", "options": ["Honeytokens", "Firewalls", "Ransomware", "Spyware"], "a": "Honeytokens" },
+                "fr": { "q": "Comment appelle-t-on les 'leurres de données' comme les faux fichiers Word?", "options": ["Honeytokens", "Pare-feu", "Ransomware", "Logiciels espions"], "a": "Honeytokens" }
+            }
+        ];
+
+        let currentLang = 'ar';
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let timer;
+        let timeLeft = 15;
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            document.documentElement.dir = translations[lang].dir;
+            document.documentElement.lang = lang;
+            updateUI();
+            if (!document.getElementById('question-screen').classList.contains('hidden')) {
+                showQuestion();
+            }
+        }
+
+        function updateUI() {
+            const t = translations[currentLang];
+            document.getElementById('ui-title').innerText = t.title;
+            document.getElementById('ui-welcome').innerText = t.welcome;
+            document.getElementById('ui-start-btn').innerText = t.startBtn;
+            document.getElementById('ui-timer-label').innerText = t.time + ':';
+            document.getElementById('next-btn').innerText = t.next;
+            document.getElementById('ui-result-title').innerText = t.resultTitle;
+            document.getElementById('ui-restart-btn').innerText = t.restart;
+        }
+
+        function startQuiz() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('question-screen').classList.remove('hidden');
+            showQuestion();
+        }
+
+        function showQuestion() {
+            clearInterval(timer);
+            const t = translations[currentLang];
+            const qData = quizDataFull[currentQuestionIndex][currentLang];
+
+            document.getElementById('question-text').innerText = `> EXECUTING_QUERY: ${qData.q}`;
+            document.getElementById('question-number').innerText = `${t.node}: ${currentQuestionIndex + 1} / ${quizDataFull.length}`;
+
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.width = `${(currentQuestionIndex / quizDataFull.length) * 100}%`;
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            qData.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.innerText = `[ ] ${opt}`;
+                btn.className = 'option-btn w-full text-start p-4 matrix-font text-green-500 block text-sm';
+                if (currentLang === 'ar') btn.style.textAlign = 'right';
+                btn.onclick = () => selectOption(btn, opt, qData.a);
+                container.appendChild(btn);
+            });
+
+            timeLeft = 15.00;
+            document.getElementById('next-btn').classList.add('hidden');
+            document.getElementById('feedback-text').style.opacity = '0';
+            startTimer();
+        }
+
+        function startTimer() {
+            timer = setInterval(() => {
+                timeLeft -= 0.05;
+                if (timeLeft < 0) timeLeft = 0;
+                document.getElementById('timer').innerText = `${timeLeft.toFixed(2)}s`;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    autoHandleTimeout();
+                }
+            }, 50);
+        }
+
+        function selectOption(btn, choice, correct) {
+            clearInterval(timer);
+            const t = translations[currentLang];
+            const allBtns = document.getElementById('options-container').querySelectorAll('button');
+
+            allBtns.forEach(b => {
+                b.disabled = true;
+                // Check if text content contains the correct answer string
+                if (b.innerText.includes(correct)) b.classList.add('correct');
+            });
+
+            const feedback = document.getElementById('feedback-text');
+            if (choice === correct) {
+                score++;
+                feedback.innerText = t.feedbackCorrect;
+                feedback.className = 'matrix-font text-sm text-green-500';
+            } else {
+                btn.classList.add('wrong');
+                feedback.innerText = t.feedbackWrong;
+                feedback.className = 'matrix-font text-sm text-red-500';
+            }
+            feedback.style.opacity = '1';
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        function autoHandleTimeout() {
+            const t = translations[currentLang];
+            const correct = quizDataFull[currentQuestionIndex][currentLang].a;
+            const allBtns = document.getElementById('options-container').querySelectorAll('button');
+            allBtns.forEach(b => {
+                b.disabled = true;
+                if (b.innerText.includes(correct)) b.classList.add('correct');
+            });
+            const feedback = document.getElementById('feedback-text');
+            feedback.innerText = t.feedbackTimeout;
+            feedback.className = 'matrix-font text-sm text-red-500';
+            feedback.style.opacity = '1';
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizDataFull.length) {
+                showQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            document.getElementById('question-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+            document.getElementById('progress-bar').style.width = '100%';
+            document.getElementById('score-display').innerText = `${score}/${quizDataFull.length}`;
+
+            const t = translations[currentLang];
+            const percent = (score / quizDataFull.length) * 100;
+            const msg = document.getElementById('result-message');
+            if (percent === 100) msg.innerText = t.statusElite;
+            else if (percent >= 70) msg.innerText = t.statusAdvanced;
+            else if (percent >= 50) msg.innerText = t.statusIncomplete;
+            else msg.innerText = t.statusScript;
+        }
+
+        // Init
+        updateUI();
+    </script>
+</body>
+
+</html>

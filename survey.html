@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Survey - Honeypot Project</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Roboto:wght@400;700&family=Azeret+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --matrix-green: #00ff41;
+            --bg-black: #0d0208;
+        }
+        body {
+            background-color: var(--bg-black);
+            color: var(--matrix-green);
+            font-family: 'Cairo', 'Roboto', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        #matrix-canvas {
+            position: fixed;
+            top: 0; left: 0; z-index: -1;
+            opacity: 0.3;
+        }
+        .glass-panel {
+            background: rgba(13, 2, 8, 0.92);
+            border: 1px solid var(--matrix-green);
+            box-shadow: 0 0 25px rgba(0, 255, 65, 0.15);
+        }
+        input[type="text"] {
+            background: rgba(0, 255, 65, 0.05) !important;
+            border: 1px solid var(--matrix-green) !important;
+            color: var(--matrix-green) !important;
+        }
+        input[type="radio"] {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--matrix-green);
+            border-radius: 50%;
+            cursor: pointer;
+            display: inline-grid;
+            place-content: center;
+        }
+        input[type="radio"]:checked::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            background-color: var(--matrix-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--matrix-green);
+        }
+        .lang-btn {
+            border: 1px solid var(--matrix-green);
+            padding: 4px 12px;
+            font-size: 13px;
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+        .lang-btn:hover, .lang-btn.active {
+            background: var(--matrix-green);
+            color: black;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <canvas id="matrix-canvas"></canvas>
+
+    <div class="max-w-4xl mx-auto glass-panel p-6 md:p-10 rounded-lg relative my-8">
+        <!-- Language Switcher -->
+        <div class="flex flex-wrap justify-end gap-2 mb-8">
+            <button onclick="changeLang('ar')" id="btn-ar" class="lang-btn active">عربي</button>
+            <button onclick="changeLang('en')" id="btn-en" class="lang-btn">EN</button>
+            <button onclick="changeLang('fr')" id="btn-fr" class="lang-btn">FR</button>
+            <button onclick="changeLang('de')" id="btn-de" class="lang-btn">DE</button>
+        </div>
+
+        <h1 id="main-title" class="text-xl md:text-2xl font-bold text-center mb-10 border-b border-[#00ff41]/30 pb-6 tracking-tight">
+            استبيان واقع وتحديات استخدام مصائد الاختراق (Honeypot) في الأمن السيبراني
+        </h1>
+
+        <form id="surveyForm" class="space-y-12">
+            <div class="space-y-3">
+                <label id="lbl-name" class="block font-bold">الاسم بالكامل (أو كود الطالب)</label>
+                <input type="text" name="student_name" required class="w-full p-3 rounded outline-none focus:ring-1 focus:ring-[#00ff41] transition-all">
+            </div>
+
+            <!-- Q1 -->
+            <div class="space-y-4">
+                <p id="q1-text" class="font-bold text-lg">1. صفك الدراسي:</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q1" value="1st Prep" required> <span id="opt1-1">أول إعدادي</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q1" value="2nd Prep"> <span id="opt1-2">ثاني إعدادي</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q1" value="3rd Prep"> <span id="opt1-3">ثالث إعدادي</span></label>
+                </div>
+            </div>
+
+            <!-- Q2 -->
+            <div class="space-y-4">
+                <p id="q2-text" class="font-bold text-lg">2. هل تحب مادة التكنولوجيا؟</p>
+                <div class="flex gap-8">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q2" value="Yes" required> <span class="opt-yes">نعم</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q2" value="No"> <span class="opt-no">لا</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q2" value="Maybe"> <span id="opt-maybe">ربما</span></label>
+                </div>
+            </div>
+
+            <!-- Q3 -->
+            <div class="space-y-4">
+                <p id="q3-text" class="font-bold text-lg">3. هل سمعت من قبل عن الأمن السيبراني؟</p>
+                <div class="flex gap-8">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q3" value="Yes" required> <span class="opt-yes">نعم</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q3" value="No"> <span class="opt-no">لا</span></label>
+                </div>
+            </div>
+
+            <!-- Q4 -->
+            <div class="space-y-4">
+                <p id="q4-text" class="font-bold text-lg">4. هل سمعت عن شيء اسمه Honeypot؟</p>
+                <div class="flex gap-8">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q4" value="Yes" required> <span class="opt-yes">نعم</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q4" value="No"> <span class="opt-no">لا</span></label>
+                </div>
+            </div>
+
+            <!-- Q5 -->
+            <div class="space-y-4">
+                <p id="q5-text" class="font-bold text-lg">5. إذا سمعت عنه من قبل، من أين؟</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q5" value="School"> <span id="opt5-1">من المدرسة</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q5" value="Internet"> <span id="opt5-2">من الإنترنت</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q5" value="Video"> <span id="opt5-3">من فيديو</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q5" value="Personal"> <span id="opt5-4">بحث شخصي</span></label>
+                </div>
+            </div>
+
+            <!-- Q6 -->
+            <div class="space-y-4">
+                <p id="q6-text" class="font-bold text-lg">6. هل تعتقد أن "مصائد الاختراق" تغني عن أنظمة جدار الحماية (Firewall)؟</p>
+                <div class="flex gap-8">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q6" value="Yes" required> <span class="opt-yes">نعم</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q6" value="No"> <span class="opt-no">لا</span></label>
+                </div>
+            </div>
+
+            <!-- Q7 -->
+            <div class="space-y-4">
+                <p id="q7-text" class="font-bold text-lg">7. أين يمكن استخدام "مصيدة الاختراق"؟</p>
+                <div class="grid grid-cols-1 gap-3">
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q7" value="Personal" required> <span id="opt7-1">الأجهزة الشخصية</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q7" value="Internal Networks"> <span id="opt7-2">الشبكات الداخلية للشركات</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q7" value="Global Servers"> <span id="opt7-3">الخوادم العالمية</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q7" value="All"> <span id="opt7-4">كل ما سبق</span></label>
+                </div>
+            </div>
+
+            <!-- Q8 -->
+            <div class="space-y-4">
+                <p id="q8-text" class="font-bold text-lg">8. ما هو تعريفك لـ Honeypot؟</p>
+                <div class="grid grid-cols-1 gap-3">
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q8" value="Decoy" required> <span id="opt8-1">نظام وهمي لجذب المهاجمين</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q8" value="Direct Protection"> <span id="opt8-2">أداة حماية مباشرة</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q8" value="Virus"> <span id="opt8-3">نوع من الفيروسات</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q8" value="IDK"> <span id="opt8-4">لا أعلم</span></label>
+                </div>
+            </div>
+
+            <!-- Q9 -->
+            <div class="space-y-4">
+                <p id="q9-text" class="font-bold text-lg">9. ما مدى معرفتك لمفهوم مصائد الاختراق (Honeypot)؟</p>
+                <div class="grid grid-cols-1 gap-3">
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q9" value="Nothing" required> <span id="opt9-1">لا أعرف عنها شيئاً</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q9" value="Know Concept"> <span id="opt9-2">أعرف المفهوم</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q9" value="Expert"> <span id="opt9-3">أعرف تفاصيلها وكيفية عملها</span></label>
+                </div>
+            </div>
+
+            <!-- Q10 -->
+            <div class="space-y-4">
+                <p id="q10-text" class="font-bold text-lg">10. هل تعتقد أن الـ Honeypot يساهم في تحسين مستوى الأمن السيبراني؟</p>
+                <div class="flex gap-8">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q10" value="Yes" required> <span class="opt-yes">نعم</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q10" value="No"> <span class="opt-no">لا</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q10" value="Not Sure"> <span id="opt10-3">غير متأكد</span></label>
+                </div>
+            </div>
+
+            <!-- Q11 -->
+            <div class="space-y-4">
+                <p id="q11-text" class="font-bold text-lg">11. ما أكثر ميزة مهمة في الـ Honeypot في رأيك؟</p>
+                <div class="grid grid-cols-1 gap-3">
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q11" value="Detection" required> <span id="opt11-1">لاكتشاف الهجمات</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q11" value="Understanding"> <span id="opt11-2">لفهم طريقة تفكير المخترق</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q11" value="Protect Real"> <span id="opt11-3">لحماية الأنظمة الحقيقية</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q11" value="All"> <span id="opt11-4">كل ما سبق</span></label>
+                </div>
+            </div>
+
+            <!-- Q12 -->
+            <div class="space-y-4">
+                <p id="q12-text" class="font-bold text-lg">12. ما هو الهدف الأساسي من زرع "مصيدة الاختراق" في الشبكة؟</p>
+                <div class="grid grid-cols-1 gap-3">
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q12" value="Distract" required> <span id="opt12-1">تشتيت المهاجمين وإبعادهم عن الأنظمة الحقيقية</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q12" value="Intelligence"> <span id="opt12-2">جمع معلومات استخباراتية عن أساليب المهاجمين</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q12" value="Early Detection"> <span id="opt12-3">كشف الاختراق في مراحل مبكرة</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q12" value="All"> <span id="opt12-4">كل ما سبق</span></label>
+                </div>
+            </div>
+
+            <!-- Q13 -->
+            <div class="space-y-4">
+                <p id="q13-text" class="font-bold text-lg">13. هل تعتبر مصائد الاختراق من أذكى الوسائل الدفاعية؟</p>
+                <div class="flex gap-8">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q13" value="Yes" required> <span class="opt-yes">نعم</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="q13" value="No"> <span class="opt-no">لا</span></label>
+                </div>
+            </div>
+
+            <button type="submit" id="btn-submit" class="w-full py-4 bg-[#00ff41] text-black font-bold rounded uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_20px_rgba(0,255,65,0.4)]">
+                إرسال الرد وتأكيد الموقع الجغرافي
+            </button>
+        </form>
+
+        <div id="status" class="mt-6 text-center font-bold hidden"></div>
+        <p class="text-center text-[11px] mt-6 opacity-40 font-mono">SUPABASE CONNECTED - MATRIX SYSTEM v3.2</p>
+    </div>
+
+    <script>
+        // Updated Supabase credentials from your latest message
+        const SUPABASE_PROJECT_URL = "https://qgyqaudbffvnmtatouhp.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_F4xinKZzFDz5CeBolYsVoQ_KlN7x7nd";
+        
+        // Initialize client using a unique local name to prevent SyntaxError
+        const surveyClient = window.supabase.createClient(SUPABASE_PROJECT_URL, SUPABASE_ANON_KEY);
+
+        // Matrix Falling Code Effect
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        const chars = '01ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ0123456789';
+        const fontSize = 16;
+        const drops = Array(Math.floor(canvas.width / fontSize)).fill(1);
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0F0'; ctx.font = fontSize + 'px monospace';
+            drops.forEach((y, i) => {
+                const text = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillText(text, i * fontSize, y * fontSize);
+                if (y * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            });
+        }
+        setInterval(draw, 35);
+
+        // Language Switch Logic
+        const translations = {
+            ar: { title: "استبيان واقع وتحديات استخدام مصائد الاختراق (Honeypot) في الأمن السيبراني", name: "الاسم بالكامل (أو كود الطالب)", q1: "1. صفك الدراسي:", opt1_1: "أول إعدادي", opt1_2: "ثاني إعدادي", opt1_3: "ثالث إعدادي", q2: "2. هل تحب مادة التكنولوجيا؟", maybe: "ربما", yes: "نعم", no: "لا", submit: "إرسال الرد وتأكيد الموقع الجغرافي", dir: "rtl" },
+            en: { title: "Reality & Challenges of Honeypots Survey", name: "Full Name / Student Code", q1: "1. Your Grade:", opt1_1: "7th Grade", opt1_2: "8th Grade", opt1_3: "9th Grade", q2: "2. Do you like Technology?", maybe: "Maybe", yes: "Yes", no: "No", submit: "Submit Response & Location", dir: "ltr" },
+            fr: { title: "Enquête sur les Honeypots en Cybersécurité", name: "Nom Complet / Code Étudiant", q1: "1. Votre Niveau:", opt1_1: "1ère Prépa", opt1_2: "2ème Prépa", opt1_3: "3ème Prépa", q2: "2. Aimez-vous la technologie ?", maybe: "Peut-être", yes: "Oui", no: "Non", submit: "Envoyer la réponse", dir: "ltr" },
+            de: { title: "Honeypot Cybersicherheits-Umfrage", name: "Vollständiger Name / Code", q1: "1. Deine Stufe:", opt1_1: "7. Klasse", opt1_2: "8. Klasse", opt1_3: "9. Klasse", q2: "2. Magst du Technik?", maybe: "Vielleicht", yes: "Ja", no: "Nein", submit: "Antwort senden", dir: "ltr" }
+        };
+
+        function changeLang(lang) {
+            const t = translations[lang];
+            document.documentElement.dir = t.dir;
+            document.documentElement.lang = lang;
+            document.getElementById('main-title').innerText = t.title;
+            document.getElementById('lbl-name').innerText = t.name;
+            document.getElementById('q1-text').innerText = t.q1;
+            document.getElementById('opt1-1').innerText = t.opt1_1;
+            document.getElementById('opt1-2').innerText = t.opt1_2;
+            document.getElementById('opt1-3').innerText = t.opt1_3;
+            document.getElementById('q2-text').innerText = t.q2;
+            document.getElementById('opt-maybe').innerText = t.maybe;
+            document.querySelectorAll('.opt-yes').forEach(e => e.innerText = t.yes);
+            document.querySelectorAll('.opt-no').forEach(e => e.innerText = t.no);
+            document.getElementById('btn-submit').innerText = t.submit;
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${lang}`).classList.add('active');
+        }
+
+        // Location Handling
+        let userLocation = "Geolocation not enabled";
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                pos => userLocation = `${pos.coords.latitude}, ${pos.coords.longitude}`,
+                err => console.warn("Location error:", err.message)
+            );
+        }
+
+        // Form Submission to Supabase
+        const surveyForm = document.getElementById('surveyForm');
+        surveyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusDiv = document.getElementById('status');
+            statusDiv.classList.remove('hidden', 'text-red-500');
+            statusDiv.classList.add('text-green-500');
+            statusDiv.innerText = ">>>> CONNECTING TO UPLINK... PLEASE WAIT.";
+
+            const formData = new FormData(surveyForm);
+            const payload = {
+                student_name: formData.get('student_name'),
+                q1: formData.get('q1'),
+                q2: formData.get('q2'),
+                q3: formData.get('q3'),
+                q4: formData.get('q4'),
+                q5: formData.get('q5'),
+                q6: formData.get('q6'),
+                q7: formData.get('q7'),
+                q8: formData.get('q8'),
+                q9: formData.get('q9'),
+                q10: formData.get('q10'),
+                q11: formData.get('q11'),
+                q12: formData.get('q12'),
+                q13: formData.get('q13'),
+                location: userLocation,
+                language: document.documentElement.lang || 'ar',
+                created_at: new Date().toISOString()
+            };
+
+            try {
+                // Ensure table 'survey_responses' exists in Supabase
+                const { data, error } = await surveyClient
+                    .from('survey_responses')
+                    .insert([payload]);
+
+                if (error) throw error;
+
+                statusDiv.innerText = ">>>> RESPONSE VERIFIED. DATA SECURELY STORED IN THE MATRIX.";
+                surveyForm.reset();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (err) {
+                console.error("Supabase error:", err);
+                statusDiv.classList.add('text-red-500');
+                statusDiv.innerText = ">>>> CRITICAL ERROR: DATABASE LINK FAILED. ENSURE TABLE 'survey_responses' IS CREATED.";
+            }
+        });
+    </script>
+</body>
+</html>
